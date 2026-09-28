@@ -2,9 +2,9 @@
   <v-app>
     <v-app-bar style="flex-grow: 0" class="text-no-wrap">
       <v-toolbar-title
-        ><router-link to="/" class="nodecoration"
-          >Bellingcat OpenStreetMap search</router-link
-        ></v-toolbar-title
+        ><router-link to="/" class="nodecoration">{{
+          appTitle
+        }}</router-link></v-toolbar-title
       >
       <v-spacer />
       <span class="user" v-if="user">
@@ -32,6 +32,9 @@ export default {
     this.$store.dispatch("getKeys");
   },
   computed: {
+    appTitle() {
+      return process.env.VUE_APP_TITLE || "OpenStreetMap Search";
+    },
     user() {
       return this.$store.state.user;
     },

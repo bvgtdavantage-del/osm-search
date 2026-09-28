@@ -49,3 +49,7 @@ The frontend requires environment variables for Mapbox geocoding queries and for
 - `VUE_APP_FIREBASE_STORAGE_BUCKET`
 - `VUE_APP_FIREBASE_MESSAGING_SENDER_ID`
 - `VUE_APP_FIREBASE_APP_ID`
+
+## Self-hosting with Docker
+
+A complete single-server setup (PostGIS, importer, API, web with HTTPS) for a GCC-region instance is in [DEPLOY.md](DEPLOY.md).

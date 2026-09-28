@@ -17,7 +17,8 @@ import queries from "@/assets/queries";
 
 Vue.use(Vuex);
 
-const OSM_SEARCH_API = "https://api.osm-search.bellingcat.com";
+// Same-origin by default: the bundled Caddy config proxies /api/* to the API.
+const OSM_SEARCH_API = process.env.VUE_APP_API_URL || "/api";
 
 export default new Vuex.Store({
   state: {
@@ -31,8 +32,11 @@ export default new Vuex.Store({
     mode: "osm",
     loading: false,
     token: false,
-    mapCenter: [42.2, -71.7],
-    mapZoom: 8,
+    mapCenter: [
+      parseFloat(process.env.VUE_APP_DEFAULT_LAT || "25.2048"),
+      parseFloat(process.env.VUE_APP_DEFAULT_LNG || "55.2708"),
+    ],
+    mapZoom: parseInt(process.env.VUE_APP_DEFAULT_ZOOM || "11"),
     responseTime: null,
     osmKeys: [],
     selectedKeyValues: [],
@@ -169,7 +173,11 @@ export default new Vuex.Store({
       let time1 = performance.now();
 
       fetch(
-        `${OSM_SEARCH_API}/intersection?l=${bbox[0][1]}&b=${bbox[0][0]}&r=${bbox[1][1]}&t=${bbox[1][0]}&buffer=${range}&filters=${filters}`,
+        `${OSM_SEARCH_API}/intersection?l=${bbox[0][1]}&b=${bbox[0][0]}&r=${
+          bbox[1][1]
+        }&t=${bbox[1][0]}&buffer=${range}&filters=${encodeURIComponent(
+          filters
+        )}`,
         {
           headers: {
             Authorization: "Bearer " + state.token,
@@ -204,7 +212,7 @@ export default new Vuex.Store({
             commit("setLoading", false);
             commit(
               "setError",
-              "Search error. Check your custom features or email logan@bellingcat.com."
+              "Search error. Check your custom features and try again."
             );
           }
         });
