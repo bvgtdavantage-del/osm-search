@@ -1,0 +1,111 @@
+# Self-hosted OSM Search. See DEPLOY.md.
+#   docker compose up -d --build                 # start db, api, web
+#   docker compose --profile import run --rm importer   # load / refresh map data
+
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${PG_DB:-osm}
+      POSTGRES_USER: ${PG_USER:-osm}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:?set PG_PASSWORD in .env}
+    command:
+      - postgres
+      - -c
+      - shared_buffers=${PG_SHARED_BUFFERS:-2GB}
+      - -c
+      - effective_cache_size=${PG_EFFECTIVE_CACHE_SIZE:-4GB}
+      - -c
+      - maintenance_work_mem=${PG_MAINTENANCE_WORK_MEM:-1GB}
+      - -c
+      - work_mem=64MB
+      - -c
+      - max_wal_size=4GB
+      - -c
+      - random_page_cost=1.1
+    shm_size: 1g
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  importer:
+    profiles: ["import"]
+    build:
+      context: .
+      dockerfile: deploy/importer/Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGDATABASE: ${PG_DB:-osm}
+      PGUSER: ${PG_USER:-osm}
+      PGPASSWORD: ${PG_PASSWORD}
+      OSM_EXTRACT_URL: ${OSM_EXTRACT_URL:-https://download.geofabrik.de/asia/gcc-states-latest.osm.pbf}
+      OSM_BBOX: ${OSM_BBOX:-}
+      OSM2PGSQL_CACHE_MB: ${OSM2PGSQL_CACHE_MB:-2000}
+      OSM2PGSQL_PROCS: ${OSM2PGSQL_PROCS:-4}
+    volumes:
+      - osmdata:/data
+
+  api:
+    build: ./api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PG_HOST: db
+      PG_PORT: "5432"
+      PG_DB: ${PG_DB:-osm}
+      PG_USER: ${PG_USER:-osm}
+      PG_PASSWORD: ${PG_PASSWORD}
+      AUTH_REQUIRED: ${AUTH_REQUIRED:-true}
+      ALLOWED_EMAILS: ${ALLOWED_EMAILS:-}
+      LOG_SEARCHES: ${LOG_SEARCHES:-true}
+      FIREBASE_CREDENTIALS: /run/secrets/service_account.json
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+      MAX_AREA_KM2: ${MAX_AREA_KM2:-4000000}
+      MAX_RESULTS: ${MAX_RESULTS:-100}
+    volumes:
+      - ./secrets:/run/secrets:ro
+
+  web:
+    build:
+      context: .
+      dockerfile: deploy/web/Dockerfile
+      args:
+        VUE_APP_TITLE: ${APP_TITLE:-OpenStreetMap Search}
+        VUE_APP_API_URL: /api
+        VUE_APP_DEFAULT_LAT: ${DEFAULT_LAT:-25.2048}
+        VUE_APP_DEFAULT_LNG: ${DEFAULT_LNG:-55.2708}
+        VUE_APP_DEFAULT_ZOOM: ${DEFAULT_ZOOM:-11}
+        VUE_APP_MAPBOX_TOKEN: ${MAPBOX_TOKEN:-}
+        VUE_APP_FIREBASE_API_KEY: ${FIREBASE_API_KEY:-}
+        VUE_APP_FIREBASE_AUTH_DOMAIN: ${FIREBASE_AUTH_DOMAIN:-}
+        VUE_APP_FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-}
+        VUE_APP_FIREBASE_STORAGE_BUCKET: ${FIREBASE_STORAGE_BUCKET:-}
+        VUE_APP_FIREBASE_MESSAGING_SENDER_ID: ${FIREBASE_MESSAGING_SENDER_ID:-}
+        VUE_APP_FIREBASE_APP_ID: ${FIREBASE_APP_ID:-}
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      DOMAIN: ${DOMAIN:-:80}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  pgdata:
+  osmdata:
+  caddy_data:
+  caddy_config:

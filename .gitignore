@@ -92,3 +92,9 @@ node_modules/
 
 # dotenv environment variables file
 .env
+
+# Deployment
+.env
+secrets/*
+!secrets/.gitkeep
+__pycache__/

@@ -1,0 +1,14 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Saved search presets: each user sees and manages only their own.
+    match /presets/{id} {
+      allow read, delete: if request.auth != null && resource.data.author_uid == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.author_uid == request.auth.uid;
+    }
+    // Search audit log: written by the API (Admin SDK bypasses rules). No client access.
+    match /searches/{id} {
+      allow read, write: if false;
+    }
+  }
+}

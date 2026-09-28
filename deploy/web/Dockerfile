@@ -1,0 +1,22 @@
+FROM node:20-bookworm-slim AS build
+WORKDIR /app
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci --no-audit --no-fund
+COPY frontend/ ./
+ARG VUE_APP_TITLE
+ARG VUE_APP_API_URL=/api
+ARG VUE_APP_DEFAULT_LAT
+ARG VUE_APP_DEFAULT_LNG
+ARG VUE_APP_DEFAULT_ZOOM
+ARG VUE_APP_MAPBOX_TOKEN
+ARG VUE_APP_FIREBASE_API_KEY
+ARG VUE_APP_FIREBASE_AUTH_DOMAIN
+ARG VUE_APP_FIREBASE_PROJECT_ID
+ARG VUE_APP_FIREBASE_STORAGE_BUCKET
+ARG VUE_APP_FIREBASE_MESSAGING_SENDER_ID
+ARG VUE_APP_FIREBASE_APP_ID
+RUN npm run build
+
+FROM caddy:2-alpine
+COPY --from=build /app/dist /srv
+COPY deploy/web/Caddyfile /etc/caddy/Caddyfile

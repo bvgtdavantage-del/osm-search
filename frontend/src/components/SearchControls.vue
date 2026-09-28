@@ -153,7 +153,10 @@ export default {
       } else if (this.$store.state.mode == "terrain") {
         return "http://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}";
       } else if (this.$store.state.mode == "satellite") {
-        return "https://api.mapbox.com/styles/v1/mapbox/satellite-v9/tiles/512/{z}/{x}/{y}{r}?access_token=pk.eyJ1IjoiYmVsbGluZ2NhdC1tYXBib3giLCJhIjoiY2w4c201OGZsMHdkOTNwbWhkb3I4dGE2cCJ9.GFxMJQJ-dV7VRBAcTTHOzg";
+        return (
+          "https://api.mapbox.com/styles/v1/mapbox/satellite-v9/tiles/512/{z}/{x}/{y}{r}?access_token=" +
+          process.env.VUE_APP_MAPBOX_TOKEN
+        );
       } else {
         return "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
       }
